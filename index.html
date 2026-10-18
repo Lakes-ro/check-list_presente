@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ec4899">
+    <title>Lista de Presentes - Sincronizada</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="style.css">
+    <!-- Versões fixadas (evita quebra/supply chain de @latest) -->
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body class="dark-mode">
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1><i data-lucide="gift"></i> <span id="app-title">Minhas Listas</span></h1>
+                <div class="header-actions">
+                    <button id="install-btn" type="button" class="btn-secondary" data-action="install" title="Instalar aplicativo" aria-label="Instalar aplicativo" hidden>
+                        <i data-lucide="download"></i> <span class="btn-label">Instalar</span>
+                    </button>
+                    <button id="sync-btn" type="button" data-action="sync" title="Sincronizar agora" aria-label="Sincronizar agora" hidden>
+                        <i data-lucide="refresh-cw"></i>
+                    </button>
+                    <button id="add-list-btn" type="button" class="btn-primary" data-action="open-list-modal" aria-label="Nova lista" hidden>
+                        <i data-lucide="plus"></i> <span class="btn-label">Nova Lista</span>
+                    </button>
+                    <span id="user-email" class="user-email" hidden></span>
+                    <button id="logout-btn" type="button" data-action="logout" title="Sair" aria-label="Sair da conta" hidden>
+                        <i data-lucide="log-out"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="search-bar" id="search-bar" hidden>
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar listas ou itens..." aria-label="Buscar listas ou itens" autocomplete="off">
+            </div>
+        </header>
+
+        <main id="lists-container">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Carregando suas listas...</p>
+            </div>
+        </main>
+
+        <section id="auth-view" class="auth-card" aria-labelledby="auth-title" hidden>
+            <h2 id="auth-title">Entre para gerenciar suas listas</h2>
+            <p class="auth-hint">Quem recebe o link da sua lista não precisa de conta.</p>
+            <div class="auth-tabs" role="tablist">
+                <button type="button" class="auth-tab active" role="tab" aria-selected="true" data-action="auth-tab" data-mode="signin">Entrar</button>
+                <button type="button" class="auth-tab" role="tab" aria-selected="false" data-action="auth-tab" data-mode="signup">Criar conta</button>
+            </div>
+            <form id="auth-form" novalidate>
+                <div class="form-group">
+                    <label for="auth-email">E-mail</label>
+                    <input type="email" id="auth-email" autocomplete="email" maxlength="254" placeholder="voce@exemplo.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="auth-password">Senha</label>
+                    <input type="password" id="auth-password" autocomplete="current-password" minlength="8" maxlength="72" placeholder="Mínimo 8 caracteres" required>
+                </div>
+                <div class="form-group" id="auth-password2-group" hidden>
+                    <label for="auth-password2">Confirmar senha</label>
+                    <input type="password" id="auth-password2" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Repita a senha">
+                </div>
+                <p id="auth-message" class="auth-message" role="alert" hidden></p>
+                <button type="submit" id="auth-submit" class="btn-primary btn-block">Entrar</button>
+                <button type="button" id="forgot-btn" class="link-btn" data-action="forgot-password">Esqueci minha senha</button>
+            </form>
+        </section>
+
+        <section id="recovery-view" class="auth-card" aria-labelledby="recovery-title" hidden>
+            <h2 id="recovery-title">Definir nova senha</h2>
+            <form id="recovery-form" novalidate>
+                <div class="form-group">
+                    <label for="new-password">Nova senha</label>
+                    <input type="password" id="new-password" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Mínimo 8 caracteres" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-password2">Confirmar nova senha</label>
+                    <input type="password" id="new-password2" autocomplete="new-password" minlength="8" maxlength="72" required>
+                </div>
+                <p id="recovery-message" class="auth-message" role="alert" hidden></p>
+                <button type="submit" class="btn-primary btn-block">Salvar nova senha</button>
+                <button type="button" class="link-btn" data-action="back-to-login">Voltar ao login</button>
+            </form>
+        </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- Modal para Nova Lista -->
+    <div id="list-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+        <div class="modal-content">
+            <h2 id="modal-title">Nova Lista de Presentes</h2>
+            <form id="list-form">
+                <div class="form-group">
+                    <label for="list-name">Nome da Lista</label>
+                    <input type="text" id="list-name" required maxlength="100" placeholder="Ex: Aniversário, Natal...">
+                </div>
+                <div class="form-group">
+                    <label for="user-name">Seu Nome (Opcional)</label>
+                    <input type="text" id="user-name" maxlength="50" placeholder="Quem está criando a lista?">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" data-action="close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Lista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Novo Item -->
+    <div id="item-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="item-modal-title" aria-hidden="true">
+        <div class="modal-content">
+            <h2 id="item-modal-title">Adicionar Item</h2>
+            <form id="item-form">
+                <input type="hidden" id="target-list-id">
+                <div class="form-group">
+                    <label for="item-name">Nome do Item</label>
+                    <input type="text" id="item-name" required maxlength="100" placeholder="O que você quer ganhar?">
+                </div>
+                <div class="form-group">
+                    <label for="item-desc">Descrição (Opcional)</label>
+                    <textarea id="item-desc" maxlength="300" placeholder="Detalhes, tamanho, cor..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="item-price">Preço Estimado</label>
+                        <input type="number" id="item-price" step="0.01" min="0" max="99999999.99" inputmode="decimal" placeholder="0,00">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-emoji">Emoji</label>
+                        <input type="text" id="item-emoji" maxlength="16" placeholder="🎁">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="item-link">Link do Produto</label>
+                    <input type="url" id="item-link" maxlength="2000" placeholder="https://loja.com/produto">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" data-action="close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Adicionar Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Instruções de instalação para iPhone/iPad (Safari não oferece botão automático) -->
+    <div id="install-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="install-title" aria-hidden="true">
+        <div class="modal-content">
+            <h2 id="install-title">Instalar no iPhone / iPad</h2>
+            <ol class="install-steps">
+                <li>Abra esta página no <strong>Safari</strong>.</li>
+                <li>Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).</li>
+                <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
+            </ol>
+            <div class="modal-actions">
+                <button type="button" class="btn-primary" data-action="close-modal">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
