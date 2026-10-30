@@ -3,58 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#ec4899">
-    <title>Lista de Presentes - Sincronizada</title>
+    <meta name="theme-color" content="#151b2e">
+    <title>Lista de Presentes - Organize seus desejos</title>
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
-    <!-- Versões fixadas (evita quebra/supply chain de @latest) -->
-    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!-- Versão fixada (evita quebra/supply chain de @latest) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 </head>
-<body class="dark-mode">
-    <div class="container">
-        <header>
+<body class="dark">
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <header class="header">
+        <div class="container">
             <div class="header-content">
-                <h1><i data-lucide="gift"></i> <span id="app-title">Minhas Listas</span></h1>
-                <div class="header-actions">
-                    <button id="install-btn" type="button" class="btn-secondary" data-action="install" title="Instalar aplicativo" aria-label="Instalar aplicativo" hidden>
-                        <i data-lucide="download"></i> <span class="btn-label">Instalar</span>
+                <div class="header-left">
+                    <div class="logo" aria-hidden="true">🎁</div>
+                    <div>
+                        <h1>Lista de Presentes</h1>
+                        <p class="subtitle">Organize seus desejos</p>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="search-box" id="search-bar" hidden>
+                        <input type="search" id="search-input" placeholder="Buscar..." aria-label="Buscar listas ou itens" autocomplete="off">
+                    </div>
+
+                    <button type="button" id="sync-btn" class="status-indicator" data-action="sync" title="Sincronizar agora" aria-label="Sincronizar agora" hidden>
+                        <span class="status-dot" id="status-dot"></span>
+                        <span id="status-text">Pronto</span>
                     </button>
-                    <button id="sync-btn" type="button" data-action="sync" title="Sincronizar agora" aria-label="Sincronizar agora" hidden>
-                        <i data-lucide="refresh-cw"></i>
+
+                    <button type="button" id="install-btn" class="btn btn-outline" data-action="install" title="Instalar aplicativo" aria-label="Instalar aplicativo" hidden>
+                        <span aria-hidden="true">⬇️</span>
+                        <span class="hide-mobile">Instalar</span>
                     </button>
-                    <button id="add-list-btn" type="button" class="btn-primary" data-action="open-list-modal" aria-label="Nova lista" hidden>
-                        <i data-lucide="plus"></i> <span class="btn-label">Nova Lista</span>
+
+                    <button type="button" id="home-btn" class="btn btn-ghost" data-action="home" title="Voltar para o início" aria-label="Ir para o início" hidden>
+                        <span aria-hidden="true">🏠</span>
+                        <span class="hide-mobile">Início</span>
                     </button>
-                    <span id="user-email" class="user-email" hidden></span>
-                    <button id="logout-btn" type="button" data-action="logout" title="Sair" aria-label="Sair da conta" hidden>
-                        <i data-lucide="log-out"></i>
+
+                    <div class="user-info" id="user-info" hidden>
+                        <span aria-hidden="true">👤</span>
+                        <span id="user-name" class="hide-mobile"></span>
+                    </div>
+
+                    <button type="button" id="settings-btn" class="btn btn-ghost" data-action="open-settings" title="Configurações" aria-label="Abrir configurações" hidden>
+                        <span aria-hidden="true">⚙️</span>
+                    </button>
+
+                    <button type="button" id="admin-logo" class="admin-logo" data-action="admin-logo" aria-label="Logo" hidden>
+                        <span aria-hidden="true">🎁</span>
                     </button>
                 </div>
             </div>
-            <div class="search-bar" id="search-bar" hidden>
-                <i data-lucide="search"></i>
-                <input type="text" id="search-input" placeholder="Buscar listas ou itens..." aria-label="Buscar listas ou itens" autocomplete="off">
-            </div>
-        </header>
+        </div>
+    </header>
 
-        <main id="lists-container">
+    <main class="main-content">
+        <div id="lists-container">
             <div class="loading">
                 <div class="spinner"></div>
                 <p>Carregando suas listas...</p>
             </div>
-        </main>
+        </div>
 
         <section id="auth-view" class="auth-card" aria-labelledby="auth-title" hidden>
             <h2 id="auth-title">Entre para gerenciar suas listas</h2>
             <p class="auth-hint">Quem recebe o link da sua lista não precisa de conta.</p>
-            <div class="auth-tabs" role="tablist">
+            <p id="signup-closed-note" class="auth-hint" hidden>Novos cadastros estão fechados no momento. Entre com uma conta existente.</p>
+            <div class="auth-tabs" id="auth-tabs" role="tablist">
                 <button type="button" class="auth-tab active" role="tab" aria-selected="true" data-action="auth-tab" data-mode="signin">Entrar</button>
                 <button type="button" class="auth-tab" role="tab" aria-selected="false" data-action="auth-tab" data-mode="signup">Criar conta</button>
             </div>
             <form id="auth-form" novalidate>
+                <div class="form-group" id="auth-name-group" hidden>
+                    <label for="auth-name">Seu nome (opcional)</label>
+                    <input type="text" id="auth-name" autocomplete="name" maxlength="50" placeholder="Como aparecer nas listas compartilhadas">
+                </div>
                 <div class="form-group">
                     <label for="auth-email">E-mail</label>
                     <input type="email" id="auth-email" autocomplete="email" maxlength="254" placeholder="voce@exemplo.com" required>
@@ -68,7 +97,7 @@
                     <input type="password" id="auth-password2" autocomplete="new-password" minlength="8" maxlength="72" placeholder="Repita a senha">
                 </div>
                 <p id="auth-message" class="auth-message" role="alert" hidden></p>
-                <button type="submit" id="auth-submit" class="btn-primary btn-block">Entrar</button>
+                <button type="submit" id="auth-submit" class="btn btn-primary btn-block">Entrar</button>
                 <button type="button" id="forgot-btn" class="link-btn" data-action="forgot-password">Esqueci minha senha</button>
             </form>
         </section>
@@ -85,66 +114,152 @@
                     <input type="password" id="new-password2" autocomplete="new-password" minlength="8" maxlength="72" required>
                 </div>
                 <p id="recovery-message" class="auth-message" role="alert" hidden></p>
-                <button type="submit" class="btn-primary btn-block">Salvar nova senha</button>
+                <button type="submit" class="btn btn-primary btn-block">Salvar nova senha</button>
                 <button type="button" class="link-btn" data-action="back-to-login">Voltar ao login</button>
             </form>
         </section>
-    </div>
 
-    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+        <section id="admin-view" class="admin-panel" aria-labelledby="admin-title" hidden>
+            <div class="admin-header">
+                <div>
+                    <h2 id="admin-title">Painel de controle</h2>
+                    <p class="dashboard-stats">Acesso total • visível somente para o administrador</p>
+                </div>
+                <div class="admin-header-actions">
+                    <button type="button" class="btn btn-outline" data-action="admin-refresh">Atualizar</button>
+                    <button type="button" class="btn btn-outline" data-action="admin-close">Voltar ao app</button>
+                    <button type="button" class="btn btn-outline btn-danger" data-action="admin-exit">Desativar modo admin</button>
+                </div>
+            </div>
+            <div class="admin-stats" id="admin-stats"></div>
+            <div class="admin-toolbar">
+                <div class="admin-tabs" role="tablist">
+                    <button type="button" class="auth-tab active" role="tab" aria-selected="true" data-action="admin-tab" data-tab="users">Usuários</button>
+                    <button type="button" class="auth-tab" role="tab" aria-selected="false" data-action="admin-tab" data-tab="sessions">Sessões</button>
+                    <button type="button" class="auth-tab" role="tab" aria-selected="false" data-action="admin-tab" data-tab="activity">Atividade</button>
+                    <button type="button" class="auth-tab" role="tab" aria-selected="false" data-action="admin-tab" data-tab="access">Acesso</button>
+                </div>
+                <select id="admin-user-filter" aria-label="Filtrar por usuário" hidden></select>
+                <select id="admin-action-filter" aria-label="Filtrar por ação" hidden></select>
+            </div>
+            <div id="admin-content"></div>
+        </section>
+    </main>
 
-    <!-- Modal para Nova Lista -->
-    <div id="list-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+    <!-- Configurações -->
+    <div id="settings-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
         <div class="modal-content">
-            <h2 id="modal-title">Nova Lista de Presentes</h2>
-            <form id="list-form">
-                <div class="form-group">
-                    <label for="list-name">Nome da Lista</label>
-                    <input type="text" id="list-name" required maxlength="100" placeholder="Ex: Aniversário, Natal...">
+            <div class="modal-header">
+                <h2 id="settings-title">Configurações</h2>
+                <button type="button" class="btn-close" data-action="close-modal" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="settings-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="settings-email">E-mail da conta</label>
+                        <input type="text" id="settings-email" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings-name">Seu nome</label>
+                        <input type="text" id="settings-name" maxlength="50" placeholder="Digite seu nome">
+                        <p class="help-text">Aparece como "Criado por" nas listas novas que você compartilhar.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Dados</label>
+                        <div class="btn-row">
+                            <button type="button" class="btn btn-outline" data-action="export-data">Exportar dados (JSON)</button>
+                            <button type="button" class="btn btn-outline" data-action="import-data">Importar dados</button>
+                        </div>
+                        <input type="file" id="import-file" accept=".json,application/json" aria-label="Arquivo de backup para importar" hidden>
+                        <p class="help-text">A importação aceita backups deste app e da versão antiga e adiciona as listas às atuais.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Conta</label>
+                        <button type="button" class="btn btn-outline" data-action="logout">Sair da conta</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Perigo</label>
+                        <button type="button" class="btn btn-outline btn-danger" data-action="reset-data">Excluir todas as minhas listas</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="user-name">Seu Nome (Opcional)</label>
-                    <input type="text" id="user-name" maxlength="50" placeholder="Quem está criando a lista?">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" data-action="close-modal">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar Lista</button>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal para Novo Item -->
+    <!-- Criar / editar lista -->
+    <div id="list-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="list-modal-title">Criar Nova Lista</h2>
+                <button type="button" class="btn-close" data-action="close-modal" aria-label="Fechar">&times;</button>
+            </div>
+            <form id="list-form">
+                <input type="hidden" id="list-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="list-name">Nome da lista</label>
+                        <input type="text" id="list-name" required maxlength="100" placeholder="Ex: Aniversário 2026">
+                    </div>
+                    <div class="form-group">
+                        <label for="list-desc">Descrição</label>
+                        <textarea id="list-desc" rows="3" maxlength="500" placeholder="Opcional"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="list-visibility">Visibilidade</label>
+                        <select id="list-visibility">
+                            <option value="public">Pública: os outros usuários veem</option>
+                            <option value="private">Privada: só eu (e o administrador) vejo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-action="close-modal">Cancelar</button>
+                    <button type="submit" id="list-submit" class="btn btn-primary">Criar Lista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Adicionar / editar item -->
     <div id="item-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="item-modal-title" aria-hidden="true">
         <div class="modal-content">
-            <h2 id="item-modal-title">Adicionar Item</h2>
+            <div class="modal-header">
+                <h2 id="item-modal-title">Adicionar Novo Item</h2>
+                <button type="button" class="btn-close" data-action="close-modal" aria-label="Fechar">&times;</button>
+            </div>
             <form id="item-form">
                 <input type="hidden" id="target-list-id">
-                <div class="form-group">
-                    <label for="item-name">Nome do Item</label>
-                    <input type="text" id="item-name" required maxlength="100" placeholder="O que você quer ganhar?">
-                </div>
-                <div class="form-group">
-                    <label for="item-desc">Descrição (Opcional)</label>
-                    <textarea id="item-desc" maxlength="300" placeholder="Detalhes, tamanho, cor..."></textarea>
-                </div>
-                <div class="form-row">
+                <input type="hidden" id="item-id">
+                <div class="modal-body">
                     <div class="form-group">
-                        <label for="item-price">Preço Estimado</label>
-                        <input type="number" id="item-price" step="0.01" min="0" max="99999999.99" inputmode="decimal" placeholder="0,00">
+                        <label for="item-name">Nome do item *</label>
+                        <input type="text" id="item-name" required maxlength="100" placeholder="O que você quer ganhar?">
                     </div>
                     <div class="form-group">
-                        <label for="item-emoji">Emoji</label>
-                        <input type="text" id="item-emoji" maxlength="16" placeholder="🎁">
+                        <label for="item-desc">Descrição</label>
+                        <textarea id="item-desc" rows="2" maxlength="300" placeholder="Detalhes, tamanho, cor... (opcional)"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="item-price">Preço estimado</label>
+                            <input type="text" id="item-price" inputmode="decimal" maxlength="20" placeholder="Ex: 299,90">
+                        </div>
+                        <div class="form-group">
+                            <label for="item-emoji">Emoji</label>
+                            <input type="text" id="item-emoji" maxlength="16" placeholder="Ex: 📚">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-link">Link do produto</label>
+                        <input type="url" id="item-link" maxlength="2000" placeholder="https://loja.com/produto (opcional)">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="item-link">Link do Produto</label>
-                    <input type="url" id="item-link" maxlength="2000" placeholder="https://loja.com/produto">
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" data-action="close-modal">Cancelar</button>
-                    <button type="submit" class="btn-primary">Adicionar Item</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-action="close-modal">Cancelar</button>
+                    <button type="submit" id="item-submit" class="btn btn-primary">Adicionar</button>
                 </div>
             </form>
         </div>
@@ -153,14 +268,19 @@
     <!-- Instruções de instalação para iPhone/iPad (Safari não oferece botão automático) -->
     <div id="install-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="install-title" aria-hidden="true">
         <div class="modal-content">
-            <h2 id="install-title">Instalar no iPhone / iPad</h2>
-            <ol class="install-steps">
-                <li>Abra esta página no <strong>Safari</strong>.</li>
-                <li>Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).</li>
-                <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
-            </ol>
-            <div class="modal-actions">
-                <button type="button" class="btn-primary" data-action="close-modal">Entendi</button>
+            <div class="modal-header">
+                <h2 id="install-title">Instalar no iPhone / iPad</h2>
+                <button type="button" class="btn-close" data-action="close-modal" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ol class="install-steps">
+                    <li>Abra esta página no <strong>Safari</strong>.</li>
+                    <li>Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).</li>
+                    <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="close-modal">Entendi</button>
             </div>
         </div>
     </div>
